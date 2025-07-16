@@ -1,6 +1,6 @@
 {
   "name": "fastify-crud-app",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A Fastify CRUD application with SQLite database",
   "main": "dist/server.js",
   "type": "module",
