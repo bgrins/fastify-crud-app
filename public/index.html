@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fastify CRUD App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            font-size: 2rem;
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #ddd;
+        }
+        .tab {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            color: #666;
+            transition: all 0.3s;
+        }
+        .tab.active {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+        }
+        .content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .section {
+            display: none;
+        }
+        .section.active {
+            display: block;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        .btn-danger {
+            background: #e74c3c;
+        }
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        .list {
+            margin-top: 30px;
+        }
+        .item {
+            background: #f8f9fa;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        .item h3 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        .item-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        .message {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: #3498db;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-card h3 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Fastify CRUD Application</h1>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="tabs">
+            <button class="tab active" data-tab="dashboard">Dashboard</button>
+            <button class="tab" data-tab="users">Users</button>
+            <button class="tab" data-tab="posts">Posts</button>
+        </div>
+
+        <div class="content">
+            <div id="message"></div>
+
+            <section id="dashboard" class="section active">
+                <h2>Dashboard</h2>
+                <div class="stats" id="stats">
+                    <div class="stat-card">
+                        <h3 id="userCount">0</h3>
+                        <p>Total Users</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="postCount">0</h3>
+                        <p>Total Posts</p>
+                    </div>
+                </div>
+                <p>Welcome to the Fastify CRUD application. Use the tabs above to manage users and posts.</p>
+                <p style="margin-top: 20px;">
+                    <strong>API Documentation:</strong> <a href="/docs" target="_blank">View Swagger UI</a>
+                </p>
+            </section>
+
+            <section id="users" class="section">
+                <h2>User Management</h2>
+                <form id="userForm">
+                    <input type="hidden" id="userId">
+                    <div class="form-group">
+                        <label for="userName">Name:</label>
+                        <input type="text" id="userName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="userEmail">Email:</label>
+                        <input type="email" id="userEmail" required>
+                    </div>
+                    <button type="submit">Save User</button>
+                    <button type="button" onclick="clearUserForm()">Clear</button>
+                </form>
+                <div class="list" id="usersList"></div>
+            </section>
+
+            <section id="posts" class="section">
+                <h2>Post Management</h2>
+                <form id="postForm">
+                    <input type="hidden" id="postId">
+                    <div class="form-group">
+                        <label for="postTitle">Title:</label>
+                        <input type="text" id="postTitle" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="postContent">Content:</label>
+                        <textarea id="postContent" rows="4" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="postUserId">User:</label>
+                        <select id="postUserId" required>
+                            <option value="">Select a user...</option>
+                        </select>
+                    </div>
+                    <button type="submit">Save Post</button>
+                    <button type="button" onclick="clearPostForm()">Clear</button>
+                </form>
+                <div class="list" id="postsList"></div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '';
+
+        // Security: Escape HTML to prevent XSS
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.dataset.tab;
+                
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(tabName).classList.add('active');
+                
+                if (tabName === 'dashboard') loadDashboard();
+                if (tabName === 'users') loadUsers();
+                if (tabName === 'posts') loadPosts();
+            });
+        });
+
+        // Message handling
+        function showMessage(text, type = 'success') {
+            const messageEl = document.getElementById('message');
+            messageEl.innerHTML = `<div class="message ${type}">${escapeHtml(text)}</div>`;
+            setTimeout(() => {
+                messageEl.innerHTML = '';
+            }, 3000);
+        }
+
+        // Dashboard
+        async function loadDashboard() {
+            try {
+                const [users, posts] = await Promise.all([
+                    fetch(`${API_URL}/users`).then(r => r.json()),
+                    fetch(`${API_URL}/posts`).then(r => r.json())
+                ]);
+                
+                document.getElementById('userCount').textContent = users.length;
+                document.getElementById('postCount').textContent = posts.length;
+            } catch (error) {
+                showMessage('Failed to load dashboard data', 'error');
+            }
+        }
+
+        // Users
+        async function loadUsers() {
+            try {
+                const response = await fetch(`${API_URL}/users`);
+                const users = await response.json();
+                
+                const usersList = document.getElementById('usersList');
+                usersList.innerHTML = '<h3>Users</h3>';
+                
+                users.forEach(user => {
+                    const userEl = document.createElement('div');
+                    userEl.className = 'item';
+                    userEl.innerHTML = `
+                        <h3>${escapeHtml(user.name)}</h3>
+                        <p>Email: ${escapeHtml(user.email)}</p>
+                        <p>Created: ${new Date(user.created_at).toLocaleString()}</p>
+                        <div class="item-actions">
+                            <button onclick="editUser(${user.id})">Edit</button>
+                            <button class="btn-danger" onclick="deleteUser(${user.id})">Delete</button>
+                        </div>
+                    `;
+                    usersList.appendChild(userEl);
+                });
+                
+                // Update user select in posts form
+                const userSelect = document.getElementById('postUserId');
+                userSelect.innerHTML = '<option value="">Select a user...</option>';
+                users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = user.name;
+                    userSelect.appendChild(option);
+                });
+            } catch (error) {
+                showMessage('Failed to load users', 'error');
+            }
+        }
+
+        async function editUser(id) {
+            try {
+                const response = await fetch(`${API_URL}/users/${id}`);
+                const user = await response.json();
+                
+                document.getElementById('userId').value = user.id;
+                document.getElementById('userName').value = user.name;
+                document.getElementById('userEmail').value = user.email;
+                
+                window.scrollTo(0, 0);
+            } catch (error) {
+                showMessage('Failed to load user', 'error');
+            }
+        }
+
+        async function deleteUser(id) {
+            if (!confirm('Are you sure you want to delete this user?')) return;
+            
+            try {
+                await fetch(`${API_URL}/users/${id}`, { method: 'DELETE' });
+                showMessage('User deleted successfully');
+                loadUsers();
+            } catch (error) {
+                showMessage('Failed to delete user', 'error');
+            }
+        }
+
+        function clearUserForm() {
+            document.getElementById('userForm').reset();
+            document.getElementById('userId').value = '';
+        }
+
+        // Posts
+        async function loadPosts() {
+            try {
+                const response = await fetch(`${API_URL}/posts`);
+                const posts = await response.json();
+                
+                const postsList = document.getElementById('postsList');
+                postsList.innerHTML = '<h3>Posts</h3>';
+                
+                // Get all users to map user IDs to names
+                const usersResponse = await fetch(`${API_URL}/users`);
+                const users = await usersResponse.json();
+                const userMap = {};
+                users.forEach(user => userMap[user.id] = user.name);
+                
+                posts.forEach(post => {
+                    const postEl = document.createElement('div');
+                    postEl.className = 'item';
+                    postEl.innerHTML = `
+                        <h3>${escapeHtml(post.title)}</h3>
+                        <p>${escapeHtml(post.content)}</p>
+                        <p>Author: ${escapeHtml(userMap[post.user_id] || 'Unknown')} | Created: ${new Date(post.created_at).toLocaleString()}</p>
+                        <div class="item-actions">
+                            <button onclick="editPost(${post.id})">Edit</button>
+                            <button class="btn-danger" onclick="deletePost(${post.id})">Delete</button>
+                        </div>
+                    `;
+                    postsList.appendChild(postEl);
+                });
+            } catch (error) {
+                showMessage('Failed to load posts', 'error');
+            }
+        }
+
+        async function editPost(id) {
+            try {
+                const response = await fetch(`${API_URL}/posts/${id}`);
+                const post = await response.json();
+                
+                document.getElementById('postId').value = post.id;
+                document.getElementById('postTitle').value = post.title;
+                document.getElementById('postContent').value = post.content;
+                document.getElementById('postUserId').value = post.user_id;
+                
+                window.scrollTo(0, 0);
+            } catch (error) {
+                showMessage('Failed to load post', 'error');
+            }
+        }
+
+        async function deletePost(id) {
+            if (!confirm('Are you sure you want to delete this post?')) return;
+            
+            try {
+                await fetch(`${API_URL}/posts/${id}`, { method: 'DELETE' });
+                showMessage('Post deleted successfully');
+                loadPosts();
+            } catch (error) {
+                showMessage('Failed to delete post', 'error');
+            }
+        }
+
+        function clearPostForm() {
+            document.getElementById('postForm').reset();
+            document.getElementById('postId').value = '';
+        }
+
+        // Form submissions
+        document.getElementById('userForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const id = document.getElementById('userId').value;
+            const userData = {
+                name: document.getElementById('userName').value,
+                email: document.getElementById('userEmail').value
+            };
+            
+            try {
+                const response = await fetch(
+                    id ? `${API_URL}/users/${id}` : `${API_URL}/users`,
+                    {
+                        method: id ? 'PUT' : 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(userData)
+                    }
+                );
+                
+                if (response.ok) {
+                    showMessage(id ? 'User updated successfully' : 'User created successfully');
+                    clearUserForm();
+                    loadUsers();
+                } else {
+                    throw new Error('Failed to save user');
+                }
+            } catch (error) {
+                showMessage('Failed to save user', 'error');
+            }
+        });
+
+        document.getElementById('postForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const id = document.getElementById('postId').value;
+            const postData = {
+                title: document.getElementById('postTitle').value,
+                content: document.getElementById('postContent').value,
+                user_id: parseInt(document.getElementById('postUserId').value)
+            };
+            
+            try {
+                const response = await fetch(
+                    id ? `${API_URL}/posts/${id}` : `${API_URL}/posts`,
+                    {
+                        method: id ? 'PUT' : 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(id ? {title: postData.title, content: postData.content} : postData)
+                    }
+                );
+                
+                if (response.ok) {
+                    showMessage(id ? 'Post updated successfully' : 'Post created successfully');
+                    clearPostForm();
+                    loadPosts();
+                } else {
+                    throw new Error('Failed to save post');
+                }
+            } catch (error) {
+                showMessage('Failed to save post', 'error');
+            }
+        });
+
+        // Initial load
+        loadDashboard();
+    </script>
+</body>
+</html>
